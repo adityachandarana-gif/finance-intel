@@ -60,9 +60,9 @@ VALID_SECTION_IDS: list[str] = [
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Best free model for structured JSON classification tasks:
-# Nemotron 3 Ultra (253B) is NVIDIA's most capable free model on OpenRouter —
-# strong instruction following and reliable JSON output.
-MODEL = "nvidia/llama-3.1-nemotron-ultra-253b-v1:free"
+# Nemotron 3 Ultra (550B!) is the most powerful model in the allowed list.
+# Exact ID confirmed via OpenRouter /api/v1/models endpoint.
+MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
 # Courtesy delay between requests (seconds)
 _MIN_REQUEST_INTERVAL: float = 1.2
@@ -72,8 +72,12 @@ _last_request_time: float = 0.0
 _MAX_RETRIES: int = 3
 _BACKOFF_SECONDS: list[float] = [2.0, 4.0, 8.0]
 
-# Fallback model if primary is unavailable
-_FALLBACK_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+# Fallback models (tried in order on gateway errors)
+_FALLBACK_MODELS = [
+    "qwen/qwen3-next-80b-a3b-instruct:free",   # Qwen3 Next 80B
+    "openai/gpt-oss-120b:free",                # GPT-OSS 120B
+    "meta-llama/llama-3.3-70b-instruct:free",  # Llama 3.3 70B
+]
 
 
 def _get_api_key() -> str:
@@ -255,7 +259,7 @@ def classify_article(
     user_prompt = _build_user_prompt(title, source, text)
 
     last_error: Exception | None = None
-    models_to_try = [MODEL, _FALLBACK_MODEL]
+    models_to_try = [MODEL] + _FALLBACK_MODELS
     current_model_idx = 0
 
     for attempt in range(_MAX_RETRIES):
