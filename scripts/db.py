@@ -57,9 +57,9 @@ def insert_article(client: Client, article_data: dict[str, Any]) -> bool:
     Args:
         client:       Authenticated Supabase client.
         article_data: Dict matching the articles table schema. Expected keys:
-                      title, url, source, published_at, section_id,
+                      title, original_url, source, published_at, section_id,
                       relevance_score, brief_summary, detailed_summary,
-                      why_it_matters, dedup_hash, url_hash, feed_category.
+                      why_it_matters, dedup_hash, url_hash.
 
     Returns:
         True if the article was inserted successfully, False otherwise.
@@ -208,16 +208,30 @@ def log_run(client: Client, stats: dict[str, Any]) -> None:
                 error_message (optional).
     """
     try:
+        duration: float | None = None
+        started = stats.get("started_at")
+        finished = stats.get("finished_at")
+        if started and finished:
+            try:
+                start_dt = datetime.fromisoformat(started)
+                finish_dt = datetime.fromisoformat(finished)
+                duration = (finish_dt - start_dt).total_seconds()
+            except ValueError:
+                pass
+
+        errors = []
+        if stats.get("error_message"):
+            errors.append(stats.get("error_message"))
+
         log_entry = {
-            "started_at": stats.get("started_at"),
-            "finished_at": stats.get("finished_at"),
+            "run_at": stats.get("started_at") or datetime.now(timezone.utc).isoformat(),
+            "duration_seconds": duration,
             "articles_pulled": stats.get("articles_pulled", 0),
             "articles_kept": stats.get("articles_kept", 0),
             "articles_discarded": stats.get("articles_discarded", 0),
             "feeds_failed": stats.get("feeds_failed", 0),
             "llm_errors": stats.get("llm_errors", 0),
-            "status": stats.get("status", "unknown"),
-            "error_message": stats.get("error_message"),
+            "errors": errors,
         }
 
         client.table("run_logs").insert(log_entry).execute()

@@ -322,10 +322,9 @@ def run_pipeline() -> dict[str, Any]:
             # Build DB record
             db_record = {
                 "title": title,
-                "url": url,
+                "original_url": url,
                 "source": source,
                 "published_at": article["published_at"],
-                "feed_category": article["feed_category"],
                 "section_id": classification["section_id"],
                 "relevance_score": classification["relevance_score"],
                 "brief_summary": classification["brief_summary"],
