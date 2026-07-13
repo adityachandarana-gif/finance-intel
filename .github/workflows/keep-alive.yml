@@ -1,0 +1,22 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    - cron: '0 0 * * 3'   # Every Wednesday at midnight UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping Supabase to prevent inactivity pause
+        run: |
+          response=$(curl -sf "$SUPABASE_URL/rest/v1/run_logs?limit=1&order=run_at.desc" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -w "\n%{http_code}")
+          echo "Supabase ping response: $response"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}

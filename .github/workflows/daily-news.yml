@@ -1,0 +1,30 @@
+name: Fetch and Summarize Finance News
+
+on:
+  schedule:
+    # Run twice daily - scheduled 30min early to account for Actions queue delay
+    - cron: '0 1 * * *'    # ~6:30 AM IST (likely runs by 7:00-7:30 AM)
+    - cron: '0 13 * * *'   # ~6:30 PM IST (likely runs by 7:00-7:30 PM)
+  workflow_dispatch: {}     # Manual trigger for testing
+
+jobs:
+  fetch-news:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch and summarize news
+        run: python scripts/fetch_and_summarize.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
