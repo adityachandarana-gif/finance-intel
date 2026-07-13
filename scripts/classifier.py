@@ -1,7 +1,7 @@
 """
 classifier.py — OpenRouter article classifier for Finance Intelligence Platform.
 
-Uses OpenRouter's API (OpenAI-compatible) with Qwen3 Next 80B A3B Instruct
+Uses OpenRouter's API (OpenAI-compatible) with Nemotron 3 Ultra 253B
 (free tier) to classify finance articles into one of 19 editorial sections.
 
 The model returns structured JSON with:
@@ -60,9 +60,9 @@ VALID_SECTION_IDS: list[str] = [
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Best free model for structured JSON classification tasks:
-# Qwen3 Next 80B is the largest instruction-tuned model in the free tier —
-# handles JSON output and financial terminology reliably.
-MODEL = "qwen/qwen3-235b-a22b"  # Qwen3 Next 80B A3B Instruct
+# Nemotron 3 Ultra (253B) is NVIDIA's most capable free model on OpenRouter —
+# strong instruction following and reliable JSON output.
+MODEL = "nvidia/llama-3.1-nemotron-ultra-253b-v1:free"
 
 # Courtesy delay between requests (seconds)
 _MIN_REQUEST_INTERVAL: float = 1.2
