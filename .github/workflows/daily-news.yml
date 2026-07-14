@@ -2,15 +2,15 @@ name: Fetch and Summarize Finance News
 
 on:
   schedule:
-    # Run twice daily - scheduled 30min early to account for Actions queue delay
-    - cron: '0 1 * * *'    # ~6:30 AM IST (likely runs by 7:00-7:30 AM)
-    - cron: '0 13 * * *'   # ~6:30 PM IST (likely runs by 7:00-7:30 PM)
+    # Run twice daily - scheduled at off-peak minutes to avoid GitHub Actions queue delays
+    - cron: '17 1 * * *'    # ~6:47 AM IST
+    - cron: '17 13 * * *'   # ~6:47 PM IST
   workflow_dispatch: {}     # Manual trigger for testing
 
 jobs:
   fetch-news:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
