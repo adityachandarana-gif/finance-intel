@@ -55,14 +55,12 @@ VALID_SECTION_IDS: list[str] = [
 ]
 
 # ──────────────────────────────────────────────
-# OpenRouter configuration
+# NVIDIA NIM configuration
 # ──────────────────────────────────────────────
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
+NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 
-# Best free model for structured JSON classification tasks:
-# Nemotron 3 Ultra (550B!) is the most powerful model in the allowed list.
-# Exact ID confirmed via OpenRouter /api/v1/models endpoint.
-MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
+# Best model for structured JSON classification tasks (Nemotron 3 Ultra):
+MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
 
 # Courtesy delay between requests (seconds)
 _MIN_REQUEST_INTERVAL: float = 1.2
@@ -72,20 +70,13 @@ _last_request_time: float = 0.0
 _MAX_RETRIES: int = 3
 _BACKOFF_SECONDS: list[float] = [2.0, 4.0, 8.0]
 
-# Fallback models (tried in order on gateway errors)
-_FALLBACK_MODELS = [
-    "qwen/qwen3-next-80b-a3b-instruct:free",   # Qwen3 Next 80B
-    "openai/gpt-oss-120b:free",                # GPT-OSS 120B
-    "meta-llama/llama-3.3-70b-instruct:free",  # Llama 3.3 70B
-]
-
 
 def _get_api_key() -> str:
-    """Retrieve the OpenRouter API key from environment."""
-    key = os.environ.get("OPENROUTER_API_KEY", "")
+    """Retrieve the NVIDIA API key from environment."""
+    key = os.environ.get("NVIDIA_API_KEY", "")
     if not key:
         raise EnvironmentError(
-            "OPENROUTER_API_KEY environment variable is not set."
+            "NVIDIA_API_KEY environment variable is not set."
         )
     return key
 
@@ -196,19 +187,17 @@ def _validate_classification(data: dict[str, Any]) -> dict[str, Any] | None:
     return data
 
 
-def _call_openrouter(
+def _call_nvidia(
     api_key: str,
     model: str,
     system_prompt: str,
     user_prompt: str,
-    timeout: float = 30.0,
+    timeout: float = 45.0,
 ) -> str | None:
-    """Make a single HTTP request to OpenRouter. Returns raw text or None."""
+    """Make a single HTTP request to NVIDIA NIM API. Returns raw text or None."""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/finance-intel",
-        "X-Title": "FinPulse Finance Intelligence Platform",
     }
     payload = {
         "model": model,
@@ -222,7 +211,7 @@ def _call_openrouter(
 
     try:
         response = httpx.post(
-            OPENROUTER_BASE_URL,
+            NVIDIA_BASE_URL,
             headers=headers,
             json=payload,
             timeout=timeout,
@@ -243,7 +232,7 @@ def classify_article(
     source: str,
     text: str,
 ) -> dict[str, Any] | None:
-    """Classify a finance article using OpenRouter (Qwen3 80B free tier).
+    """Classify a finance article using NVIDIA NIM (Nemotron 3 Ultra).
 
     Args:
         title:  Article headline.
@@ -259,18 +248,15 @@ def classify_article(
     user_prompt = _build_user_prompt(title, source, text)
 
     last_error: Exception | None = None
-    models_to_try = [MODEL] + _FALLBACK_MODELS
-    current_model_idx = 0
 
     for attempt in range(_MAX_RETRIES):
-        model = models_to_try[min(current_model_idx, len(models_to_try) - 1)]
         try:
             _enforce_rate_limit()
-            raw_text = _call_openrouter(api_key, model, system_prompt, user_prompt)
+            raw_text = _call_nvidia(api_key, MODEL, system_prompt, user_prompt)
 
             if not raw_text:
                 print(f"[classifier] Empty response on attempt {attempt + 1}")
-                last_error = ValueError("Empty response from OpenRouter")
+                last_error = ValueError("Empty response from NVIDIA NIM")
                 continue
 
             parsed = _parse_json_response(raw_text)
@@ -300,11 +286,6 @@ def classify_article(
                 wait = _BACKOFF_SECONDS[attempt] * 2
                 print(f"[classifier] Rate limited (429), waiting {wait}s...")
                 time.sleep(wait)
-            elif status in (502, 503, 504):
-                # Gateway error — try fallback model
-                print(f"[classifier] Gateway error {status}, switching to fallback model")
-                current_model_idx += 1
-                time.sleep(_BACKOFF_SECONDS[attempt])
             else:
                 print(f"[classifier] HTTP error {status} on attempt {attempt + 1}")
                 time.sleep(_BACKOFF_SECONDS[attempt])
