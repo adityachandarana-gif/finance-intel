@@ -248,11 +248,15 @@ def classify_article(
     user_prompt = _build_user_prompt(title, source, text)
 
     last_error: Exception | None = None
+    print(f"[classifier] Classifying: '{title[:60]}...'")
+    start_time = time.monotonic()
 
     for attempt in range(_MAX_RETRIES):
         try:
             _enforce_rate_limit()
             raw_text = _call_nvidia(api_key, MODEL, system_prompt, user_prompt)
+            duration = time.monotonic() - start_time
+            print(f"[classifier] Success for '{title[:60]}' in {duration:.2f}s")
 
             if not raw_text:
                 print(f"[classifier] Empty response on attempt {attempt + 1}")

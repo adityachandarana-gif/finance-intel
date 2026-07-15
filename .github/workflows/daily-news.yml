@@ -23,7 +23,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Fetch and summarize news
-        run: python scripts/fetch_and_summarize.py
+        run: python -u scripts/fetch_and_summarize.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
