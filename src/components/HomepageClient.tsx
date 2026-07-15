@@ -1,12 +1,93 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ArticleCard } from "@/components/ArticleCard";
 import type { SectionGroup, Section, Article } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 
-// ── Tab Bar ──────────────────────────────────────────────────────────
+// ── SVG Icon Map (replaces emoji — per skill: no emoji as structural icons) ──
+const TAB_ICONS: Record<string, React.ReactElement> = {
+  all: (
+    <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+  ),
+  markets: (
+    <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+    </svg>
+  ),
+  india: (
+    <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  ),
+  deals: (
+    <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+    </svg>
+  ),
+  corporate: (
+    <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+  ),
+  careers: (
+    <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  default: (
+    <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+    </svg>
+  ),
+};
 
+function getTabIcon(groupId: string): React.ReactElement {
+  const key = groupId.toLowerCase();
+  for (const [k, icon] of Object.entries(TAB_ICONS)) {
+    if (key.includes(k)) return icon;
+  }
+  return TAB_ICONS.default;
+}
+
+// ── Stat Bar ─────────────────────────────────────────────────────────
+function StatBar({ total, groups, articles }: {
+  total: number;
+  groups: SectionGroup[];
+  articles: Article[];
+}) {
+  const sources = new Set(articles.map(a => a.source)).size;
+  const highRelevance = articles.filter(a => a.relevance_score >= 8).length;
+  return (
+    <div className="stat-bar animate-fade-in">
+      <div className="stat-item">
+        <div className="stat-value">{total}</div>
+        <div className="stat-label">Articles</div>
+      </div>
+      <div className="stat-divider" />
+      <div className="stat-item">
+        <div className="stat-value">{groups.length}</div>
+        <div className="stat-label">Sections</div>
+      </div>
+      <div className="stat-divider" />
+      <div className="stat-item">
+        <div className="stat-value">{sources}</div>
+        <div className="stat-label">Sources</div>
+      </div>
+      <div className="stat-divider" />
+      <div className="stat-item">
+        <div className="stat-value">{highRelevance}</div>
+        <div className="stat-label">High Relevance</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tab Bar ──────────────────────────────────────────────────────────
 function TabBar({
   groups,
   activeGroup,
@@ -22,10 +103,11 @@ function TabBar({
     <div className="tab-bar-container">
       <div className="tab-bar">
         <button
+          id="tab-all"
           className={`tab-item ${activeGroup === "all" ? "active" : ""}`}
           onClick={() => onSelect("all")}
         >
-          <span className="tab-icon">🌐</span>
+          {TAB_ICONS.all}
           All
           {articleCounts["all"] > 0 && (
             <span className="tab-count">{articleCounts["all"]}</span>
@@ -34,10 +116,11 @@ function TabBar({
         {groups.map((group) => (
           <button
             key={group.id}
+            id={`tab-${group.id}`}
             className={`tab-item ${activeGroup === group.id ? "active" : ""}`}
             onClick={() => onSelect(group.id)}
           >
-            <span className="tab-icon">{group.icon}</span>
+            {getTabIcon(group.id)}
             {group.display_name}
             {(articleCounts[group.id] || 0) > 0 && (
               <span className="tab-count">{articleCounts[group.id]}</span>
@@ -50,7 +133,6 @@ function TabBar({
 }
 
 // ── Subsection Filters ───────────────────────────────────────────────
-
 function SubsectionFilters({
   sections,
   activeSubsection,
@@ -63,12 +145,12 @@ function SubsectionFilters({
   if (sections.length === 0) return null;
 
   return (
-    <div className="subsection-filters">
+    <div className="subsection-filters animate-fade-in">
       <button
         className={`subsection-pill ${activeSubsection === "all" ? "active" : ""}`}
         onClick={() => onSelect("all")}
       >
-        All in group
+        All
       </button>
       {sections.map((section) => (
         <button
@@ -86,7 +168,6 @@ function SubsectionFilters({
 }
 
 // ── Main Homepage ────────────────────────────────────────────────────
-
 export function HomepageClient({
   initialGroups,
   initialSections,
@@ -103,17 +184,14 @@ export function HomepageClient({
   const [activeSubsection, setActiveSubsection] = useState("all");
   const [loading, setLoading] = useState(false);
 
-  // Get sections for the active group
   const groupSections = sections.filter((s) => s.group_id === activeGroup);
 
-  // Get the relevant section IDs for filtering
   const getActiveSectionIds = useCallback((): string[] => {
     if (activeGroup === "all") return [];
     if (activeSubsection !== "all") return [activeSubsection];
     return sections.filter((s) => s.group_id === activeGroup).map((s) => s.id);
   }, [activeGroup, activeSubsection, sections]);
 
-  // Compute article counts per group
   const articleCounts: Record<string, number> = { all: articles.length };
   groups.forEach((group) => {
     const groupSectionIds = sections
@@ -124,14 +202,12 @@ export function HomepageClient({
     ).length;
   });
 
-  // Filter articles based on active selections
   const filteredArticles = (() => {
     const sectionIds = getActiveSectionIds();
     if (sectionIds.length === 0) return articles;
     return articles.filter((a) => sectionIds.includes(a.section_id));
   })();
 
-  // Fetch fresh articles when needed
   useEffect(() => {
     async function fetchArticles() {
       setLoading(true);
@@ -157,13 +233,11 @@ export function HomepageClient({
       }
     }
 
-    // Only refetch if we don't have initial articles
     if (initialArticles.length === 0) {
       fetchArticles();
     }
   }, [initialArticles.length]);
 
-  // Find section for each article
   const getSectionForArticle = (sectionId: string) =>
     sections.find((s) => s.id === sectionId);
 
@@ -196,13 +270,19 @@ export function HomepageClient({
           </div>
         ) : filteredArticles.length > 0 ? (
           <>
+            {activeGroup === "all" && (
+              <StatBar
+                total={articles.length}
+                groups={groups}
+                articles={articles}
+              />
+            )}
             <div className="results-info">
               Showing <strong>{filteredArticles.length}</strong> article
               {filteredArticles.length !== 1 ? "s" : ""}
               {activeGroup !== "all" && (
                 <>
-                  {" "}
-                  in{" "}
+                  {" "}in{" "}
                   <strong>
                     {groups.find((g) => g.id === activeGroup)?.display_name}
                   </strong>
@@ -221,13 +301,18 @@ export function HomepageClient({
             </div>
           </>
         ) : (
-          <div className="empty-state">
-            <div className="empty-state-icon">📡</div>
+          <div className="empty-state animate-fade-in">
+            <div className="empty-state-icon">
+              {/* Satellite / signal icon */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12" y2="20"/>
+              </svg>
+            </div>
             <h3>No articles yet</h3>
             <p>
               The pipeline hasn&apos;t run yet, or no articles matched this
-              filter. Articles are fetched twice daily at ~7:00 AM and ~7:00 PM
-              IST.
+              filter. Articles are fetched twice daily at ~7:00 AM and ~7:00 PM IST.
             </p>
           </div>
         )}

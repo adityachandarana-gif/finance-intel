@@ -5,7 +5,6 @@ function timeAgo(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
   if (seconds < 60) return "just now";
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -26,6 +25,7 @@ export function ArticleCard({
   index?: number;
 }) {
   const staggerClass = index <= 6 ? `stagger-${Math.min(index + 1, 6)}` : "";
+  const isHighRelevance = article.relevance_score >= 8;
 
   return (
     <Link
@@ -33,6 +33,7 @@ export function ArticleCard({
       className={`article-card animate-fade-in ${staggerClass}`}
       id={`article-${article.id}`}
     >
+      {/* Header: source + section tag + time | relevance score */}
       <div className="article-card-header">
         <div className="article-card-meta">
           <span className="article-source">{article.source}</span>
@@ -43,21 +44,36 @@ export function ArticleCard({
         </div>
         <div
           className={`article-relevance ${
-            article.relevance_score >= 8 ? "relevance-high" : "relevance-medium"
+            isHighRelevance ? "relevance-high" : "relevance-medium"
           }`}
+          title={`Relevance score: ${article.relevance_score}/10`}
         >
-          <span>⚡</span>
+          {/* Bolt icon (SVG) replacing ⚡ emoji */}
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
           {article.relevance_score}
         </div>
       </div>
 
+      {/* Title */}
       <h3 className="article-card-title">{article.title}</h3>
+
+      {/* Brief Summary */}
       <p className="article-card-summary">{article.brief_summary}</p>
 
+      {/* Footer: why it matters + read more */}
       <div className="article-card-footer">
-        <span className="article-why">💡 {article.why_it_matters}</span>
+        <span className="article-why">
+          {article.why_it_matters}
+        </span>
         <span className="article-read-more">
-          Read more →
+          Read
+          {/* Arrow-right SVG */}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
         </span>
       </div>
     </Link>
