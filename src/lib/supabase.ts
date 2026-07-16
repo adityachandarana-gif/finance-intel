@@ -92,7 +92,7 @@ export async function getTodayArticles(sectionIds?: string[]): Promise<Article[]
 
 export async function getRecentArticles(
   sectionIds?: string[],
-  limit: number = 50
+  limit: number = 250
 ): Promise<Article[]> {
   // Get articles from last 48 hours if no articles today
   const cutoff = new Date();
