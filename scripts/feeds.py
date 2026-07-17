@@ -48,18 +48,8 @@ FEEDS: list[dict[str, str]] = [
     # India PE / VC / Startups
     # ──────────────────────────────────────────────
     {
-        "name": "VCCircle",
-        "url": "https://www.vccircle.com/feed",
-        "category": "india_pe_vc",
-    },
-    {
         "name": "Inc42",
         "url": "https://inc42.com/feed/",
-        "category": "india_pe_vc",
-    },
-    {
-        "name": "Entrackr",
-        "url": "https://entrackr.com/feed/",
         "category": "india_pe_vc",
     },
     {
@@ -68,12 +58,13 @@ FEEDS: list[dict[str, str]] = [
         "category": "india_pe_vc",
     },
 
+
     # ──────────────────────────────────────────────
     # Global
     # ──────────────────────────────────────────────
     {
-        "name": "Reuters Business",
-        "url": "https://feeds.reuters.com/reuters/businessNews",
+        "name": "Yahoo Finance Global",
+        "url": "https://finance.yahoo.com/news/rss",
         "category": "global",
     },
     {

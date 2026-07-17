@@ -47,8 +47,9 @@ FEED_TIMEOUT_SECONDS: int = 10
 MAX_CONCURRENT_FEEDS: int = 5
 DEDUP_WINDOW_HOURS: int = 72
 USER_AGENT: str = (
-    "FinanceIntelligencePlatform/1.0 "
-    "(RSS Aggregator; +https://github.com/your-org/finance-intel)"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36"
 )
 
 
