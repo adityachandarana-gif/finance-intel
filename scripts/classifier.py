@@ -63,7 +63,7 @@ NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
 
 # Courtesy delay between requests (seconds)
-_MIN_REQUEST_INTERVAL: float = 1.2
+_MIN_REQUEST_INTERVAL: float = 0.0
 _last_request_time: float = 0.0
 
 # Retry configuration

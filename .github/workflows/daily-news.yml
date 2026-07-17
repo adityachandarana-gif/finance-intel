@@ -10,7 +10,7 @@ on:
 jobs:
   fetch-news:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 

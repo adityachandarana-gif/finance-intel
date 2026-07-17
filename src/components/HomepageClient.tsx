@@ -221,7 +221,7 @@ export function HomepageClient({
           .gte("fetched_at", cutoff.toISOString())
           .order("relevance_score", { ascending: false })
           .order("published_at", { ascending: false })
-          .limit(250);
+          .limit(500);
 
         if (!error && data) {
           setArticles(data);

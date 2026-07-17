@@ -26,6 +26,7 @@ import time
 from datetime import datetime, timezone
 from html import unescape
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import feedparser
 import httpx
@@ -285,41 +286,41 @@ def run_pipeline() -> dict[str, Any]:
             stats["status"] = "success_empty"
             return stats
 
-        # ── Step 4: Process each article ──
+        # ── Step 4: Process each article (Parallel) ──
         print("─" * 40)
         print("Processing articles (dedup → classify → insert)...")
         print("─" * 40)
 
-        for i, article in enumerate(all_articles, 1):
+        # First, deduplicate synchronously
+        unique_articles = []
+        for article in all_articles:
+            title_hash, url_hash = compute_hashes(article["title"], article["url"])
+            if title_hash in existing_hashes or url_hash in existing_hashes:
+                stats["articles_discarded"] += 1
+                continue
+            
+            existing_hashes.add(title_hash)
+            existing_hashes.add(url_hash)
+            unique_articles.append(article)
+
+        print(f"[pipeline] {len(unique_articles)} unique articles to classify and insert.")
+
+        def process_single(article: dict[str, Any]) -> tuple[str, dict[str, Any] | None]:
             title = article["title"]
             url = article["url"]
             source = article["source"]
             text = article.get("text", "")
-
-            # Dedup check (in-memory, fast)
             title_hash, url_hash = compute_hashes(title, url)
 
-            if title_hash in existing_hashes or url_hash in existing_hashes:
-                stats["articles_discarded"] += 1
-                continue
-
-            # Add to in-memory set to catch duplicates within this run
-            existing_hashes.add(title_hash)
-            existing_hashes.add(url_hash)
-
-            # Classify with Gemini (sync, rate-limited)
             try:
                 classification = classify_article(title, source, text)
             except Exception as exc:
-                stats["llm_errors"] += 1
                 print(f"[classify] Unhandled error for '{title[:50]}': {exc}")
-                continue
-
+                return "llm_error", None
+            
             if classification is None:
-                stats["articles_discarded"] += 1
-                continue
+                return "discarded", None
 
-            # Build DB record
             db_record = {
                 "title": title,
                 "original_url": url,
@@ -333,18 +334,39 @@ def run_pipeline() -> dict[str, Any]:
                 "dedup_hash": title_hash,
                 "url_hash": url_hash,
             }
+            return "success", db_record
 
-            # Insert to DB
-            success = insert_article(supabase_client, db_record)
-            if success:
-                stats["articles_kept"] += 1
-                print(
-                    f"  [{i}/{len(all_articles)}] ✓ [{classification['section_id']}] "
-                    f"(score={classification['relevance_score']}) "
-                    f"{title[:60]}"
-                )
-            else:
-                stats["articles_discarded"] += 1
+        # Classify in parallel (e.g., 10 concurrent requests)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {
+                executor.submit(process_single, article): article
+                for article in unique_articles
+            }
+
+            completed = 0
+            for future in as_completed(futures):
+                completed += 1
+                article = futures[future]
+                try:
+                    result_type, db_record = future.result()
+                    if result_type == "llm_error":
+                        stats["llm_errors"] += 1
+                    elif result_type == "discarded":
+                        stats["articles_discarded"] += 1
+                    elif result_type == "success" and db_record:
+                        success = insert_article(supabase_client, db_record)
+                        if success:
+                            stats["articles_kept"] += 1
+                            print(
+                                f"  [{completed}/{len(unique_articles)}] ✓ [{db_record['section_id']}] "
+                                f"(score={db_record['relevance_score']}) "
+                                f"{db_record['title'][:60]}"
+                            )
+                        else:
+                            stats["articles_discarded"] += 1
+                except Exception as exc:
+                    print(f"[pipeline] Exception in worker for {article['title'][:50]}: {exc}")
+                    stats["llm_errors"] += 1
 
     except EnvironmentError as exc:
         stats["status"] = "error"
