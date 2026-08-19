@@ -46,10 +46,7 @@ export default async function HomePage() {
             AI-Curated · Updated Twice Daily
           </div>
           <h1>Finance Intelligence</h1>
-          <p>
-            Your daily briefing on PE, VC, IB, equity research, markets, and
-            careers — classified, summarized, and scored by AI.
-          </p>
+
         </section>
 
         {/* Live Ticker Bar */}
